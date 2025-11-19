@@ -1,48 +1,62 @@
 """
-Database Schemas
+Database Schemas for Malta Student Accommodation Booking
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model below represents a MongoDB collection.
+Collection name is the lowercase of the class name.
 """
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List
 
-from pydantic import BaseModel, Field
-from typing import Optional
+class Season(BaseModel):
+    """
+    Seasonality periods that repeat every year (by month/day).
+    Example: Oct 1 - Jun 30 = High (academic year), Jul 1 - Sep 30 = Summer.
+    rate is the base nightly rate in EUR for the apartment (before room multiplier if any).
+    """
+    name: str = Field(..., description="Season name e.g., Academic Year, Summer, Holiday")
+    start_month: int = Field(..., ge=1, le=12)
+    start_day: int = Field(..., ge=1, le=31)
+    end_month: int = Field(..., ge=1, le=12)
+    end_day: int = Field(..., ge=1, le=31)
+    rate: float = Field(..., ge=0, description="Nightly base rate in EUR")
 
-# Example schemas (replace with your own):
+class Room(BaseModel):
+    """
+    Rooms or entire apartment units available for booking.
+    multiplier adjusts season base rate (e.g., private room 1.0, entire place 1.4).
+    """
+    name: str
+    description: Optional[str] = None
+    capacity: int = Field(1, ge=1, le=8)
+    multiplier: float = Field(1.0, ge=0.5, le=3.0)
 
+class Student(BaseModel):
+    name: str
+    email: EmailStr
+    university: Optional[str] = None
+    phone: Optional[str] = None
+
+class Booking(BaseModel):
+    room_id: str = Field(..., description="ObjectId string for Room")
+    check_in: str = Field(..., description="YYYY-MM-DD")
+    check_out: str = Field(..., description="YYYY-MM-DD (exclusive)")
+    guests: int = Field(1, ge=1, le=8)
+    total_price: float = Field(..., ge=0)
+    currency: str = Field("EUR")
+    status: str = Field("pending", description="pending|confirmed|cancelled")
+    student: Student
+
+# Optional examples kept for reference
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    name: str
+    email: str
+    address: str
+    age: Optional[int] = None
+    is_active: bool = True
 
 class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
-
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+    title: str
+    description: Optional[str] = None
+    price: float
+    category: str
+    in_stock: bool = True
